@@ -1,150 +1,247 @@
-# Exercise Recognition Project (LUSIP Internship)
+# Exercise Recognition & Workout Tracking System
 
-This project was developed during my **LUSIP Internship** and focuses on **real-time exercise recognition using computer vision and machine learning**.  
-The system automatically detects and recognizes different physical exercises **live using a webcam** based on human pose estimation.
+A real-time computer vision application that detects and recognizes exercises using human pose estimation and machine learning.
 
----
+The application uses a webcam to continuously analyze body posture, identify the exercise being performed, count repetitions, and generate a final workout report.
 
-## Project Overview
+## Features
 
-The goal of this project is to perform **real-time exercise recognition** using a webcam.  
-When the detection script is executed, the webcam opens automatically, and the system identifies the exercise being performed in front of the camera using pose landmarks and trained ML/DL models.
+- Real-time webcam-based exercise detection
+- Human pose estimation using MediaPipe
+- Machine-learning-based exercise classification
+- Confidence score for exercise predictions
+- Automatic repetition counting
+- Workout duration tracking
+- Final workout summary after stopping the workout
+- Interactive Streamlit web interface
+- Real-time video processing using WebRTC
 
-### Supported Exercises
-- Bicep Curls  
-- Push-ups  
-- Squats  
-- Planks  
-- Forward Lunges   
-- Shoulder Press  
-- Lateral Raises  
-- Leg Raises  
+## Supported Exercises
 
----
+The current model recognizes 8 exercises:
 
-## Technologies Used
-
-- Python  
-- MediaPipe (Pose Estimation)  
-- OpenCV  
-- NumPy, Pandas  
-- Scikit-learn  
-- TensorFlow / Keras  
-- Jupyter Notebook  
-- Git & GitHub  
-
----
-
-## Project Structure
-```
-exercise_recognition_project/
-│
-├── detection.ipynb # Real-time exercise detection (webcam)
-├── model.ipynb # Model training
-├── dataset.ipynb # Dataset creation & preprocessing
-├── 1dcnnmodel.ipynb # CNN-based model
-│
-├── cnn_exercise_model.h5 # Trained CNN model
-├── exercise_model.pkl # Trained ML model
-├── label_encoder.pkl # Label encoder
-├── scaler.pkl # Feature scaler
-├── scaler_cnn.pkl # CNN scaler
-│
-├── exercise_32angles_dataset.csv # Pose-angle dataset
-├── Results/ # Output videos/images (ignored in repo)
-├── exercise_videos/ # Input videos (ignored in repo)
-└── README.md
-```
-
----
-
-## Demo
-
-Click the image below to watch the real-time demo on YouTube:
-
-[![Exercise Recognition Demo](https://img.youtube.com/vi/U5kGF8z4Hj8/0.jpg)](https://www.youtube.com/watch?v=U5kGF8z4Hj8)
-
----
+1. Bicep Curl
+2. Forward Lunges
+3. Lateral Raises
+4. Leg Raises
+5. Planks
+6. Push-ups
+7. Shoulder Press
+8. Squats
 
 ## How It Works
 
-1. The webcam captures live video frames
-2. **MediaPipe Pose** extracts body landmarks in real time
-3. Joint angles are calculated from the pose landmarks
-4. Extracted features are scaled appropriately
-5. Trained Machine Learning / CNN models predict the exercise
-6. The detected exercise name is displayed as **live feedback on screen**
+The application follows this pipeline:
 
----
+Webcam
+↓
+Video Frame
+↓
+MediaPipe Pose Estimation
+↓
+Body Landmark Detection
+↓
+32 Angle Features
+↓
+Feature Scaling
+↓
+Random Forest Classifier
+↓
+Exercise Prediction
+↓
+Rep Counting + Workout Tracking
+↓
+Final Workout Report
 
-## How to Run the Project
+### 1. Pose Detection
 
-### Requirements
+MediaPipe detects human body landmarks from each webcam frame.
 
-- Python 3.11
-- Webcam (for real-time detection)
+### 2. Feature Extraction
 
-### 1. Install required libraries
-```bash
+Body landmark coordinates are used to calculate body joint angles.
+
+The current model uses 32 angle-based features.
+
+### 3. Exercise Classification
+
+The extracted features are scaled using the trained scaler and passed to a Random Forest classifier.
+
+### 4. Repetition Counting
+
+Exercise-specific movement logic is used to detect completed repetitions.
+
+### 5. Workout Tracking
+
+During the workout, the application tracks:
+
+- Exercise name
+- Repetition count
+- Prediction confidence
+- Workout duration
+
+After the workout is stopped, a final workout report is displayed.
+
+## Tech Stack
+
+### Programming Language
+
+- Python
+
+### Machine Learning
+
+- Scikit-learn
+- Random Forest
+
+### Computer Vision
+
+- OpenCV
+- MediaPipe
+
+### Web Application
+
+- Streamlit
+- Streamlit-WebRTC
+
+### Data Processing
+
+- NumPy
+- Pandas
+
+### Model Persistence
+
+- Joblib
+
+## Project Structure
+
+exersice_recognition_project/
+│
+├── app.py
+├── detection.py
+│
+├── exercise_model.pkl
+├── scaler.pkl
+├── label_encoder.pkl
+│
+├── cnn_exercise_model.h5
+├── scaler_cnn.pkl
+│
+├── requirements.txt
+├── README.md
+├── .gitignore
+│
+├── data/
+│ └── exercise_32angles_dataset.csv
+│
+└── notebooks/
+├── dataset.ipynb
+├── detection.ipynb
+├── model.ipynb
+└── 1dcnnmodel.ipynb
+
+## Installation
+
+### 1. Clone the repository
+
+git clone https://github.com/tvishal11/exersice_recognition_project.git
+
+### 2. Navigate to the project
+
+cd exersice_recognition_project
+
+### 3. Create a virtual environment
+
+python -m venv venv
+
+### 4. Activate the virtual environment
+
+For Windows PowerShell:
+
+venv\Scripts\Activate.ps1
+
+### 5. Install dependencies
+
 pip install -r requirements.txt
-```
 
-### 2. Run this for real-time exercise detection
-```bash
-python detection.py
-```
+## Run the Application
 
-Alternatively, run `detection.ipynb` in Jupyter Notebook.
+Start the Streamlit application using:
 
-The webcam will open automatically and display the detected exercise in real time.
+streamlit run app.py
 
----
+The application will open in your browser.
 
-## Results
+Allow camera access when prompted and start the workout.
 
-- The system successfully recognizes multiple exercises in real time
+## Workout Report
 
-- Works using both:
+During a workout, the application performs real-time exercise recognition.
 
-  - Classical Machine Learning models
+After stopping the workout, it provides a final report containing information such as:
 
-  - CNN-based Deep Learning model
+- Detected exercise
+- Number of repetitions
+- Workout duration
+- Prediction confidence
 
-- Provides live feedback while the exercise is being performed
+This allows the user to review the completed workout session.
 
-(Result videos and images are generated locally and not pushed to GitHub.)
+## Machine Learning Model
 
----
+The primary exercise recognition model is a Random Forest Classifier trained using pose-derived angle features.
 
-## Internship Details
+The trained model and preprocessing objects are stored using Joblib:
 
-- Internship Program: LUSIP
+- exercise_model.pkl
+- scaler.pkl
+- label_encoder.pkl
 
-- Institution: LNMIIT, Jaipur
+The project also contains a CNN-based model and its associated scaler for experimentation:
 
-- Domain: Machine Learning & Computer Vision
+- cnn_exercise_model.h5
+- scaler_cnn.pkl
 
-- Project Type: Real-time Pose-based Exercise Recognition
+## Dataset
 
----
+The project uses a custom dataset containing pose-derived angle features for exercise recognition.
 
-## Author
+The dataset is available in:
 
-Vishal Tiwari, B.Tech (CSE), 
-GLA University, Mathura
+data/exercise_32angles_dataset.csv
 
----
+Each sample contains angle-based features extracted from human pose landmarks along with the corresponding exercise label.
+
+## Why Pose-Based Exercise Recognition?
+
+Instead of relying directly on raw images, the system uses body pose information and joint angles.
+
+This makes the model focus on body movement and posture rather than image appearance.
+
+The approach can therefore be useful for real-time fitness applications where the goal is to recognize exercises from human movement.
 
 ## Future Improvements
 
-- Exercise repetition counting
+Possible future improvements include:
 
-- Confidence score display
+- Support for more exercises
+- Improved repetition counting for all exercises
+- More robust detection under different camera angles
+- Workout history and user profiles
+- Progress tracking
+- Exercise-specific feedback
+- Improved confidence stabilization
+- Cloud deployment
+- Mobile application integration
 
-- Performance optimization for low-end devices
+## Author
 
-- Web or mobile application deployment
+Vishal Tiwari
 
-- Adding more exercise categories
+B.Tech Computer Science & Engineering
 
----
+GitHub:
+https://github.com/tvishal11/exersice_recognition_project
+
+## Project Goal
+
+The goal of this project is to build a practical computer-vision-based fitness assistant capable of recognizing exercises and tracking workout performance in real time.
