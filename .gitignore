@@ -1,0 +1,5 @@
+.ipynb_checkpoints/
+exercise_videos/
+__pycache__/
+*.pyc
+venv/
