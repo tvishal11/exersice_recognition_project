@@ -33,7 +33,7 @@ The current model recognizes 8 exercises:
 
 The application follows this pipeline:
 
-````text
+```text
 Webcam
   ↓
 Video Frame
@@ -53,6 +53,7 @@ Exercise Prediction
 Rep Counting + Workout Tracking
   ↓
 Final Workout Report
+```
 
 ### 1. Pose Detection
 
@@ -137,6 +138,7 @@ exercise_recognition_project/
     ├── detection.ipynb
     ├── model.ipynb
     └── 1dcnnmodel.ipynb
+```
 
 ## Installation
 
@@ -243,4 +245,3 @@ B.Tech Computer Science & Engineering
 ## Project Goal
 
 The goal of this project is to build a practical computer-vision-based fitness assistant capable of recognizing exercises and tracking workout performance in real time.
-````
