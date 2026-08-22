@@ -114,30 +114,28 @@ After the workout is stopped, a final workout report is displayed.
 
 ## Project Structure
 
-exersice_recognition_project/
+```text
+exercise_recognition_project/
 │
 ├── app.py
 ├── detection.py
-│
 ├── exercise_model.pkl
 ├── scaler.pkl
 ├── label_encoder.pkl
-│
 ├── cnn_exercise_model.h5
 ├── scaler_cnn.pkl
-│
 ├── requirements.txt
 ├── README.md
 ├── .gitignore
 │
 ├── data/
-│ └── exercise_32angles_dataset.csv
+│   └── exercise_32angles_dataset.csv
 │
 └── notebooks/
-├── dataset.ipynb
-├── detection.ipynb
-├── model.ipynb
-└── 1dcnnmodel.ipynb
+    ├── dataset.ipynb
+    ├── detection.ipynb
+    ├── model.ipynb
+    └── 1dcnnmodel.ipynb
 
 ## Installation
 
