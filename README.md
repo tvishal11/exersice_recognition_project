@@ -33,24 +33,25 @@ The current model recognizes 8 exercises:
 
 The application follows this pipeline:
 
+````text
 Webcam
-↓
+  ↓
 Video Frame
-↓
+  ↓
 MediaPipe Pose Estimation
-↓
+  ↓
 Body Landmark Detection
-↓
+  ↓
 32 Angle Features
-↓
+  ↓
 Feature Scaling
-↓
+  ↓
 Random Forest Classifier
-↓
+  ↓
 Exercise Prediction
-↓
+  ↓
 Rep Counting + Workout Tracking
-↓
+  ↓
 Final Workout Report
 
 ### 1. Pose Detection
@@ -237,9 +238,9 @@ Vishal Tiwari
 
 B.Tech Computer Science & Engineering
 
-GitHub:
-https://github.com/tvishal11/exersice_recognition_project
+[GitHub Repository](https://github.com/tvishal11/exersice_recognition_project)
 
 ## Project Goal
 
 The goal of this project is to build a practical computer-vision-based fitness assistant capable of recognizing exercises and tracking workout performance in real time.
+````
