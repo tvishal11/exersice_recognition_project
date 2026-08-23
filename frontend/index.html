@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Exercise Coach</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #222;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .camera-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        #video {
+            width: 100%;
+            max-width: 800px;
+            border-radius: 12px;
+            background: #111;
+        }
+
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #startBtn {
+            background: #28a745;
+            color: white;
+        }
+
+        #stopBtn {
+            background: #dc3545;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 10px;
+            color: #666;
+            font-size: 15px;
+        }
+
+        .stat-card p {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 700px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>🏋️ AI Exercise Coach</h1>
+
+        <div class="camera-card">
+
+            <video id="video" autoplay playsinline></video>
+
+            <div class="controls">
+                <button id="startBtn">▶ Start Workout</button>
+                <button id="stopBtn">■ Stop Workout</button>
+            </div>
+
+            <p id="status">Status: Ready</p>
+
+            <div class="stats">
+
+                <div class="stat-card">
+                    <h3>Exercise</h3>
+                    <p id="exercise">Waiting...</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Confidence</h3>
+                    <p id="confidence">0%</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Reps / Hold Time</h3>
+                    <p id="reps">0</p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const video = document.getElementById("video");
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+
+        let detecting = false;
+
+        let reps = 0;
+        let squatState = "up";
+        let pushupState = "up";
+        let bicepState = "up";
+        let shoulderPressState = "up";
+        let lateralRaiseState = "down";
+        let legRaiseState = "down";
+        let plankStartTime = null;
+        let plankTimer = 0;
+        let predictionScores = {};
+        let predictionCounts = {};
+
+        startBtn.onclick = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: true
+                });
+
+                video.srcObject = stream;
+
+                predictionScores = {};
+                predictionCounts = {};
+
+                lastPredictionTime = 0;
+
+                reps = 0;
+
+                squatState = "up";
+                pushupState = "up";
+                bicepState = "up";
+                lateralRaiseState = "down";
+                legRaiseState = "down";
+
+                plankStartTime = null;
+                plankTimer = 0;
+
+                document.getElementById("reps").textContent = reps;
+
+                detecting = true;
+                detectPose();
+
+                document.getElementById("status").textContent =
+                    "Status: Workout Active";
+
+            } catch (error) {
+                console.error(error);
+                alert("Could not access camera.");
+            }
+        };
+
+        stopBtn.onclick = () => {
+
+            // Stop accepting new predictions
+            detecting = false;
+
+            document.getElementById("status").textContent =
+                "Status: Workout Stopped";
+
+            let finalExercise = null;
+            let maxCount = 0;
+
+            for (const exercise in predictionCounts) {
+
+                if (predictionCounts[exercise] > maxCount) {
+                    maxCount = predictionCounts[exercise];
+                    finalExercise = exercise;
+                }
+            }
+
+            if (finalExercise !== null) {
+
+                const finalConfidence =
+                    predictionScores[finalExercise] /
+                    predictionCounts[finalExercise];
+
+                document.getElementById("exercise").textContent =
+                    finalExercise;
+
+                document.getElementById("confidence").textContent =
+                    Math.round(finalConfidence) + "%";
+            }
+
+            // Stop camera
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+
+            // Reset plank timer internally
+            plankStartTime = null;
+            plankTimer = 0;
+        };
+
+        const pose = new Pose({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+            }
+        });
+
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        let lastPredictionTime = 0;
+
+        pose.onResults(async (results) => {
+
+            if (!detecting) return;
+
+            if (!results.poseLandmarks) {
+                return;
+            }
+
+            console.log("Pose detected");
+
+            const now = Date.now();
+
+            // Send prediction only every 500 ms
+            if (now - lastPredictionTime < 500) {
+                return;
+            }
+
+            lastPredictionTime = now;
+
+            try {
+
+                const response = await fetch("http://127.0.0.1:8000/predict", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        landmarks: results.poseLandmarks
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!detecting) {
+                    return;
+                }
+
+                console.log("Prediction:", data);
+
+                const exercise = data.exercise;
+                const confidence = data.confidence || 0;
+
+                // Show CURRENT prediction during workout
+                document.getElementById("exercise").textContent = exercise;
+
+                document.getElementById("confidence").textContent =
+                    Math.round(confidence) + "%";
+
+                // Save prediction into history
+                if (!predictionScores[exercise]) {
+                    predictionScores[exercise] = 0;
+                    predictionCounts[exercise] = 0;
+                }
+
+                predictionScores[exercise] += confidence;
+                predictionCounts[exercise]++;
+
+                // Plank timer
+                if (data.exercise === "planks" && data.confidence >= 40) {
+
+                    if (plankStartTime === null) {
+                        plankStartTime = Date.now();
+                    }
+
+                    plankTimer = Math.floor(
+                        (Date.now() - plankStartTime) / 1000
+                    );
+
+                    document.getElementById("reps").textContent =
+                        plankTimer + " sec";
+                }
+
+                // Squat rep counting
+                if (data.exercise === "squats") {
+
+                    const leftKnee = data.angles[2];
+                    const rightKnee = data.angles[12];
+
+                    const kneeAngle = (leftKnee + rightKnee) / 2;
+
+                    if (kneeAngle < 100 && squatState === "up") {
+                        squatState = "down";
+                    }
+
+                    if (kneeAngle > 160 && squatState === "down") {
+                        reps++;
+                        squatState = "up";
+
+                        document.getElementById("reps").textContent = reps;
+                    }
+                }
+
+                // Push-up rep counting
+                if (data.exercise === "pushups") {
+
+                    const leftElbow = data.angles[0];
+                    const rightElbow = data.angles[5];
+
+                    const elbowAngle = (leftElbow + rightElbow) / 2;
+
+                    if (elbowAngle < 90 && pushupState === "up") {
+                        pushupState = "down";
+                    }
+
+                    if (elbowAngle > 160 && pushupState === "down") {
+                        reps++;
+                        pushupState = "up";
+
+                        document.getElementById("reps").textContent = reps;
+                    }
+                }
+
+                // Bicep curl rep counting
+                if (data.exercise === "bicepcurl") {
+
+                    const leftElbow = data.angles[0];
+                    const rightElbow = data.angles[5];
+
+                    const elbowAngle = (leftElbow + rightElbow) / 2;
+
+                    if (elbowAngle < 60 && bicepState === "up") {
+                        bicepState = "down";
+                    }
+
+                    if (elbowAngle > 150 && bicepState === "down") {
+                        reps++;
+                        bicepState = "up";
+
+                        document.getElementById("reps").textContent = reps;
+                    }
+                }
+
+                // Shoulder press rep counting
+                if (data.exercise === "shoulderpress") {
+
+                    const leftElbow = data.angles[0];
+                    const rightElbow = data.angles[5];
+
+                    const elbowAngle = (leftElbow + rightElbow) / 2;
+
+                    if (elbowAngle > 160 && shoulderPressState === "up") {
+                        shoulderPressState = "down";
+                    }
+
+                    if (elbowAngle < 90 && shoulderPressState === "down") {
+                        reps++;
+                        shoulderPressState = "up";
+
+                        document.getElementById("reps").textContent = reps;
+                    }
+                }
+
+                // Lateral raise rep counting
+                if (data.exercise === "lateralraises") {
+
+                    const landmarks = results.poseLandmarks;
+
+                    const leftShoulder = landmarks[11];
+                    const rightShoulder = landmarks[12];
+
+                    const leftWrist = landmarks[15];
+                    const rightWrist = landmarks[16];
+
+                    // Both hands approximately at shoulder height
+                    const armsRaised =
+                        Math.abs(leftWrist.y - leftShoulder.y) < 0.12 &&
+                        Math.abs(rightWrist.y - rightShoulder.y) < 0.12;
+
+                    // Both hands are below the shoulders
+                    const armsDown =
+                        leftWrist.y > leftShoulder.y + 0.18 &&
+                        rightWrist.y > rightShoulder.y + 0.18;
+
+                    // Arms have reached the raised position
+                    if (armsRaised && lateralRaiseState === "down") {
+                        lateralRaiseState = "up";
+                    }
+
+                    // Arms have returned down → one complete rep
+                    if (armsDown && lateralRaiseState === "up") {
+
+                        reps++;
+                        lateralRaiseState = "down";
+
+                        document.getElementById("reps").textContent = reps;
+                    }
+                }
+
+                // Leg raise rep counting
+                if (data.exercise === "legraises") {
+
+                    const landmarks = results.poseLandmarks;
+
+                    const leftHip = landmarks[23];
+                    const rightHip = landmarks[24];
+
+                    const leftKnee = landmarks[25];
+                    const rightKnee = landmarks[26];
+
+                    // Average vertical position of knees relative to hips
+                    const leftLegPosition = leftKnee.y - leftHip.y;
+                    const rightLegPosition = rightKnee.y - rightHip.y;
+
+                    const averageLegPosition =
+                        (leftLegPosition + rightLegPosition) / 2;
+
+                    // Legs raised
+                    if (
+                        averageLegPosition < 0.05 &&
+                        legRaiseState === "down"
+                    ) {
+                        legRaiseState = "up";
+                    }
+
+                    // Legs returned down = 1 rep
+                    if (
+                        averageLegPosition > 0.20 &&
+                        legRaiseState === "up"
+                    ) {
+                        reps++;
+                        legRaiseState = "down";
+
+                        document.getElementById("reps").textContent = reps;
+                    }
+                }
+
+            } catch (error) {
+                console.error("Prediction error:", error);
+            }
+        });
+
+
+        async function detectPose() {
+            if (!detecting) return;
+
+            if (video.readyState >= 2) {
+                await pose.send({ image: video });
+            }
+
+            // Check again after pose processing finishes
+            if (!detecting) return;
+
+            setTimeout(detectPose, 100);
+        }
+    </script>
+
+</body>
+
+</html>
