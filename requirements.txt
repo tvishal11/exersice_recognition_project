@@ -6,14 +6,6 @@ tensorflow==2.15.0
 keras==2.15.0
 matplotlib
 pandas
-numpy==1.26.4
-opencv-contrib-python-headless==4.8.1.78
-mediapipe==0.10.9
-scikit-learn==1.5.1
-tensorflow==2.15.0
-keras==2.15.0
-matplotlib
-pandas
 fastapi
 uvicorn[standard]
 joblib
