@@ -3,161 +3,655 @@
 
 <head>
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>AI Exercise Coach</title>
-
+    <title>FitAI — AI Exercise Coach</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
+        :root {
+            --bg: #050615;
+            --panel: rgba(13, 15, 42, .78);
+            --border: rgba(150, 95, 255, .28);
+            --purple: #9b5cff;
+            --green: #35e48b;
+            --red: #ff4d5f;
+            --blue: #4ba8ff;
+            --text: #f7f7ff;
+            --muted: #a6a8c2
+        }
+
         * {
-            box-sizing: border-box;
+            box-sizing: border-box
+        }
+
+        html {
+            scroll-behavior: smooth
         }
 
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f7fb;
-            color: #222;
+            min-height: 100vh;
+            color: var(--text);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at 78% 18%, rgba(116, 54, 255, .19), transparent 27%),
+                radial-gradient(circle at 12% 82%, rgba(49, 127, 255, .11), transparent 25%),
+                linear-gradient(145deg, #030410, #060719 48%, #09051d);
+            overflow-x: hidden
         }
 
-        .container {
-            max-width: 1000px;
-            margin: 30px auto;
-            padding: 20px;
+        body:before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: .42;
+            background-image: linear-gradient(rgba(255, 255, 255, .018) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, .018) 1px, transparent 1px);
+            background-size: 48px 48px
         }
 
-        h1 {
+        body:after {
+            content: "";
+            position: fixed;
+            width: 520px;
+            height: 520px;
+            right: -210px;
+            top: 170px;
+            border-radius: 50%;
+            background: rgba(132, 61, 255, .12);
+            filter: blur(90px);
+            pointer-events: none
+        }
+
+        .page {
+            width: min(1320px, calc(100% - 36px));
+            margin: auto;
+            position: relative;
+            z-index: 1
+        }
+
+        .navbar {
+            height: 82px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(170, 120, 255, .14)
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            min-width: 220px
+        }
+
+        .brand-mark {
+            width: 48px;
+            height: 48px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(166, 92, 255, .8);
+            border-radius: 14px;
+            font-size: 25px;
+            background: linear-gradient(145deg, rgba(142, 74, 255, .24), rgba(41, 19, 91, .45));
+            box-shadow: 0 0 28px rgba(126, 64, 255, .22)
+        }
+
+        .brand-name {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -.5px
+        }
+
+        .brand-sub {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 2px
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .nav-item {
+            padding: 12px 20px;
+            border-radius: 14px;
+            color: #d9d8e8;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: .2s
+        }
+
+        .nav-item.active,
+        .nav-item:hover {
+            color: #fff;
+            background: rgba(126, 65, 238, .18);
+            box-shadow: inset 0 0 0 1px rgba(145, 80, 255, .12)
+        }
+
+        .online-pill {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(60, 226, 139, .18);
+            background: rgba(26, 100, 67, .12);
+            color: #70eca8;
+            font-weight: 700;
+            font-size: 14px
+        }
+
+        .online-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 12px rgba(53, 228, 139, .75)
+        }
+
+        .hero {
             text-align: center;
-            margin-bottom: 25px;
+            padding: 48px 0 25px
         }
 
-        .camera-card {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            text-align: center;
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(38px, 5vw, 58px);
+            line-height: 1.05;
+            letter-spacing: -2px;
+            font-weight: 850
+        }
+
+        .hero h1 span {
+            color: var(--purple);
+            text-shadow: 0 0 28px rgba(155, 92, 255, .32)
+        }
+
+        .hero p {
+            max-width: 720px;
+            margin: 14px auto 0;
+            color: #b9bad0;
+            font-size: 18px;
+            line-height: 1.55
+        }
+
+        .workout-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 280px;
+            gap: 22px
+        }
+
+        .camera-shell {
+            position: relative;
+            min-height: 430px;
+            padding: 12px;
+            border-radius: 25px;
+            background: linear-gradient(145deg, rgba(19, 21, 52, .95), rgba(7, 9, 25, .92));
+            border: 1px solid rgba(145, 87, 255, .42);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, .38), 0 0 50px rgba(102, 48, 220, .08)
+        }
+
+        .camera-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 404px;
+            overflow: hidden;
+            border-radius: 19px;
+            background: #020308
         }
 
         #video {
+            display: block;
             width: 100%;
-            max-width: 800px;
-            border-radius: 12px;
-            background: #111;
+            height: 100%;
+            min-height: 404px;
+            object-fit: cover;
+            background: #020308
+        }
+
+        .camera-inner:after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, .16), transparent 30%, transparent 70%, rgba(0, 0, 0, .25))
+        }
+
+        .live-badge {
+            position: absolute;
+            z-index: 3;
+            left: 18px;
+            top: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 13px;
+            border-radius: 999px;
+            color: #fff;
+            background: rgba(12, 12, 22, .82);
+            backdrop-filter: blur(10px);
+            font-weight: 800;
+            font-size: 13px;
+            letter-spacing: .4px
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--red);
+            box-shadow: 0 0 12px rgba(255, 77, 95, .9)
+        }
+
+        .camera-hint {
+            position: absolute;
+            z-index: 3;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: rgba(210, 212, 232, .45);
+            pointer-events: none;
+            transition: opacity .25s
+        }
+
+        .camera-hint .camera-icon {
+            font-size: 42px;
+            margin-bottom: 8px
+        }
+
+        .camera-hint p {
+            margin: 0;
+            font-size: 14px;
+            white-space: nowrap
+        }
+
+        .exercise-card {
+            border: 1px solid rgba(150, 95, 255, .28);
+            border-radius: 24px;
+            padding: 30px 22px;
+            background: radial-gradient(circle at 50% 18%, rgba(130, 65, 255, .18), transparent 30%),
+                linear-gradient(160deg, rgba(17, 19, 48, .94), rgba(6, 8, 24, .94));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 22px 60px rgba(0, 0, 0, .28)
+        }
+
+        .exercise-label {
+            color: #e2e2ef;
+            font-size: 18px;
+            font-weight: 750;
+            margin-bottom: 28px
+        }
+
+        .exercise-icon {
+            width: 104px;
+            height: 104px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            border: 2px solid rgba(155, 92, 255, .9);
+            background: radial-gradient(circle, rgba(139, 67, 255, .23), rgba(25, 12, 57, .65));
+            box-shadow: 0 0 34px rgba(132, 66, 255, .22);
+            font-size: 46px;
+            margin-bottom: 24px
+        }
+
+        #exercise {
+            margin: 0;
+            min-height: 44px;
+            font-size: 31px;
+            font-weight: 850;
+            letter-spacing: -.8px;
+            word-break: break-word
+        }
+
+        .confidence-pill {
+            margin-top: 24px;
+            width: 100%;
+            padding: 12px 10px;
+            border-radius: 14px;
+            color: #d5b8ff;
+            background: rgba(107, 46, 214, .23);
+            border: 1px solid rgba(156, 92, 255, .14);
+            font-size: 16px;
+            font-weight: 750
         }
 
         .controls {
-            margin: 20px 0;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 18px;
+            margin: 20px 0 0
         }
 
         button {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
+            border: 0;
+            min-width: 215px;
+            padding: 15px 25px;
+            border-radius: 15px;
+            color: #fff;
             font-size: 16px;
+            font-weight: 800;
             cursor: pointer;
-        }
-
-        #startBtn {
-            background: #28a745;
-            color: white;
-        }
-
-        #stopBtn {
-            background: #dc3545;
-            color: white;
+            transition: transform .2s, box-shadow .2s, filter .2s
         }
 
         button:hover {
-            opacity: 0.85;
+            transform: translateY(-2px);
+            filter: brightness(1.06)
+        }
+
+        button:active {
+            transform: translateY(0)
+        }
+
+        #startBtn {
+            background: linear-gradient(135deg, #27cf70, #16a956);
+            box-shadow: 0 10px 28px rgba(32, 202, 105, .22)
+        }
+
+        #stopBtn {
+            background: linear-gradient(135deg, #ff4655, #d92c3c);
+            box-shadow: 0 10px 28px rgba(255, 62, 78, .18)
         }
 
         #status {
-            margin-top: 10px;
-            font-weight: bold;
-            color: #555;
+            text-align: center;
+            margin: 16px 0 0;
+            color: #aeb0c6;
+            font-size: 14px;
+            font-weight: 700
         }
 
         .stats {
+            margin: 28px 0 45px;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-top: 20px;
+            border: 1px solid rgba(145, 92, 255, .23);
+            border-radius: 22px;
+            background: rgba(8, 10, 30, .68);
+            backdrop-filter: blur(14px);
+            overflow: hidden
         }
 
         .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            min-height: 145px;
+            padding: 25px;
+            display: flex;
+            align-items: center;
+            gap: 19px
+        }
+
+        .stat-card+.stat-card {
+            border-left: 1px solid rgba(153, 153, 185, .13)
+        }
+
+        .stat-icon {
+            width: 68px;
+            height: 68px;
+            flex: 0 0 68px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            font-size: 29px
+        }
+
+        .stat-card:nth-child(1) .stat-icon {
+            color: #5af09d;
+            background: rgba(30, 173, 98, .14);
+            border: 1px solid rgba(46, 222, 128, .36)
+        }
+
+        .stat-card:nth-child(2) .stat-icon {
+            color: #b485ff;
+            background: rgba(126, 65, 238, .15);
+            border: 1px solid rgba(150, 91, 255, .4)
+        }
+
+        .stat-card:nth-child(3) .stat-icon {
+            color: #7ac4ff;
+            background: rgba(45, 137, 220, .14);
+            border: 1px solid rgba(72, 163, 255, .38)
+        }
+
+        .stat-copy {
+            min-width: 0
         }
 
         .stat-card h3 {
-            margin: 0 0 10px;
-            color: #666;
-            font-size: 15px;
+            margin: 0 0 6px;
+            color: #aeb0c8;
+            font-size: 14px;
+            letter-spacing: .5px;
+            text-transform: uppercase
         }
 
         .stat-card p {
             margin: 0;
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 31px;
+            line-height: 1.1;
+            font-weight: 850;
+            color: #fafaff
         }
 
-        @media (max-width: 700px) {
+        .stat-note {
+            margin-top: 7px;
+            font-size: 13px;
+            color: #8f91ad
+        }
+
+        .stat-card:nth-child(1) .stat-note {
+            color: var(--green)
+        }
+
+        .stat-card:nth-child(2) .stat-note {
+            color: #b484ff
+        }
+
+        .stat-card:nth-child(3) .stat-note {
+            color: #5fb6ff
+        }
+
+        @media(max-width:900px) {
+            .navbar {
+                height: auto;
+                padding: 16px 0;
+                gap: 15px;
+                flex-wrap: wrap
+            }
+
+            .brand {
+                min-width: auto
+            }
+
+            .nav-links {
+                order: 3;
+                width: 100%;
+                justify-content: center
+            }
+
+            .online-pill {
+                margin-left: auto
+            }
+
+            .workout-grid {
+                grid-template-columns: 1fr
+            }
+
+            .exercise-card {
+                min-height: 270px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 16px 24px
+            }
+
+            .exercise-label {
+                width: 100%;
+                margin-bottom: 0
+            }
+
+            .exercise-icon {
+                margin-bottom: 0
+            }
+
+            .confidence-pill {
+                width: 210px;
+                margin-top: 0
+            }
+        }
+
+        @media(max-width:650px) {
+            .page {
+                width: calc(100% - 22px)
+            }
+
+            .hero {
+                padding-top: 34px
+            }
+
+            .hero h1 {
+                font-size: 38px;
+                letter-spacing: -1.4px
+            }
+
+            .hero p {
+                font-size: 15px
+            }
+
+            .nav-links {
+                gap: 2px
+            }
+
+            .nav-item {
+                padding: 9px 12px;
+                font-size: 13px
+            }
+
+            .online-pill {
+                padding: 8px 11px;
+                font-size: 12px
+            }
+
+            .camera-shell,
+            .camera-inner,
+            #video {
+                min-height: 300px
+            }
+
+            .camera-hint p {
+                white-space: normal;
+                width: 240px
+            }
+
+            .controls {
+                flex-direction: column
+            }
+
+            button {
+                width: 100%
+            }
+
             .stats {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr
+            }
+
+            .stat-card+.stat-card {
+                border-left: 0;
+                border-top: 1px solid rgba(153, 153, 185, .13)
             }
         }
     </style>
-
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-
 </head>
 
 <body>
 
-    <div class="container">
+    <div class="page">
+        <nav class="navbar">
+            <div class="brand">
+                <div class="brand-mark">🏋️</div>
+                <div>
+                    <div class="brand-name">FitAI</div>
+                    <div class="brand-sub">AI Exercise Coach</div>
+                </div>
+            </div>
+            <div class="nav-links">
+                <a class="nav-item active" href="#">⌂ &nbsp;Workout</a>
+                <a class="nav-item" href="#stats">◷ &nbsp;Session</a>
+                <a class="nav-item" href="#about">ⓘ &nbsp;About</a>
+            </div>
+            <div class="online-pill"><span class="online-dot"></span>AI Online</div>
+        </nav>
 
-        <h1>🏋️ AI Exercise Coach</h1>
+        <section class="hero">
+            <h1>Train Smarter. <span>Move Better.</span></h1>
+            <p>Real-time AI exercise recognition and form tracking<br>powered by computer vision</p>
+        </section>
 
-        <div class="camera-card">
-
-            <video id="video" autoplay playsinline></video>
-
-            <div class="controls">
-                <button id="startBtn">▶ Start Workout</button>
-                <button id="stopBtn">■ Stop Workout</button>
+        <section class="workout-grid">
+            <div>
+                <div class="camera-shell">
+                    <div class="camera-inner">
+                        <video id="video" autoplay playsinline></video>
+                        <div class="live-badge"><span class="live-dot"></span>LIVE CAMERA</div>
+                        <div class="camera-hint" id="cameraHint">
+                            <div class="camera-icon">◉</div>
+                            <p>Press “Start Workout” to activate your camera</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button id="startBtn">▶ &nbsp;Start Workout</button>
+                    <button id="stopBtn">■ &nbsp;Stop Workout</button>
+                </div>
+                <p id="status">Status: Ready</p>
             </div>
 
-            <p id="status">Status: Ready</p>
+            <aside class="exercise-card">
+                <div class="exercise-label">Current Exercise</div>
+                <div class="exercise-icon" id="exerciseIcon">🏃</div>
+                <p id="exercise">Waiting...</p>
+                <div class="confidence-pill"><span id="confidence">0%</span> Confidence</div>
+            </aside>
+        </section>
 
-            <div class="stats">
-
-                <div class="stat-card">
-                    <h3>Exercise</h3>
-                    <p id="exercise">Waiting...</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Confidence</h3>
-                    <p id="confidence">0%</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Reps / Hold Time</h3>
+        <section class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-icon">▥</div>
+                <div class="stat-copy">
+                    <h3>Reps</h3>
                     <p id="reps">0</p>
+                    <div class="stat-note">Keep going 💪</div>
                 </div>
-
             </div>
+            <div class="stat-card">
+                <div class="stat-icon">↗</div>
+                <div class="stat-copy">
+                    <h3>Confidence</h3>
+                    <p id="confidenceStat">0%</p>
+                    <div class="stat-note">Recognition accuracy</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">◷</div>
+                <div class="stat-copy">
+                    <h3>Hold Time</h3>
+                    <p id="holdTime">0s</p>
+                    <div class="stat-note">For static exercises</div>
+                </div>
+            </div>
+        </section>
 
-        </div>
-
+        <section id="about" style="height:1px;overflow:hidden"></section>
     </div>
 
     <script>
@@ -520,8 +1014,49 @@
 
             setTimeout(detectPose, 100);
         }
-    </script>
 
+
+        // UI-only enhancements. The original recognition logic above is preserved.
+        const exerciseIcon = document.getElementById("exerciseIcon");
+        const confidenceStat = document.getElementById("confidenceStat");
+        const holdTime = document.getElementById("holdTime");
+        const cameraHint = document.getElementById("cameraHint");
+
+        const originalStartHandler = startBtn.onclick;
+        startBtn.onclick = async () => {
+            await originalStartHandler();
+            cameraHint.style.opacity = "0";
+        };
+
+        const originalStopHandler = stopBtn.onclick;
+        stopBtn.onclick = () => {
+            originalStopHandler();
+            cameraHint.style.opacity = "1";
+        };
+
+        const confidenceElement = document.getElementById("confidence");
+        new MutationObserver(() => {
+            confidenceStat.textContent = confidenceElement.textContent;
+        }).observe(confidenceElement, { childList: true, characterData: true, subtree: true });
+
+        const repsElement = document.getElementById("reps");
+        new MutationObserver(() => {
+            const value = repsElement.textContent.trim();
+            holdTime.textContent = value.endsWith("sec") ? value.replace(" sec", "s") : "0s";
+        }).observe(repsElement, { childList: true, characterData: true, subtree: true });
+
+        new MutationObserver(() => {
+            const name = document.getElementById("exercise").textContent.toLowerCase();
+            const icons = {
+                squats: "🏋️", pushups: "💪", bicepcurl: "💪",
+                shoulderpress: "🏋️", lateralraises: "🙆", legraises: "🦵", planks: "🧘"
+            };
+            exerciseIcon.textContent = icons[name] || "🏃";
+        }).observe(document.getElementById("exercise"), {
+            childList: true, characterData: true, subtree: true
+        });
+
+    </script>
 </body>
 
 </html>
