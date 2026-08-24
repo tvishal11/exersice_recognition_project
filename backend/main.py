@@ -1,9 +1,26 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import joblib
 import numpy as np
+from pathlib import Path
 
-# Same 32 angle triplets used during training
+
+# ============================================================
+# PATHS
+# ============================================================
+
+BASE_DIR = Path(__file__).resolve().parent
+
+MODEL_PATH = BASE_DIR / "exercise_model.pkl"
+SCALER_PATH = BASE_DIR / "scaler.pkl"
+LABEL_ENCODER_PATH = BASE_DIR / "label_encoder.pkl"
+
+
+# ============================================================
+# 32 ANGLE TRIPLETS
+# ============================================================
+
 angle_triplets = [
 
     (11, 13, 15),
@@ -49,6 +66,10 @@ angle_triplets = [
 ]
 
 
+# ============================================================
+# ANGLE CALCULATION
+# ============================================================
+
 def calculate_angle(a, b, c):
 
     a = np.array(a)
@@ -76,6 +97,7 @@ def get_32_angles(landmarks):
     for a, b, c in angle_triplets:
 
         try:
+
             a_coord = [
                 landmarks[a]["x"],
                 landmarks[a]["y"]
@@ -105,56 +127,101 @@ def get_32_angles(landmarks):
     return angles
 
 
-app = FastAPI()
+# ============================================================
+# FASTAPI APP
+# ============================================================
 
-from fastapi.middleware.cors import CORSMiddleware
+app = FastAPI(
+    title="AI Exercise Recognition API",
+    version="1.0.0"
+)
+
+
+# ============================================================
+# CORS
+# ============================================================
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-model = joblib.load("backend/exercise_model.pkl")
-scaler = joblib.load("backend/scaler.pkl")
-label_encoder = joblib.load("backend/label_encoder.pkl")
 
+# ============================================================
+# LOAD MODEL
+# ============================================================
+
+model = joblib.load(MODEL_PATH)
+scaler = joblib.load(SCALER_PATH)
+label_encoder = joblib.load(LABEL_ENCODER_PATH)
+
+
+# ============================================================
+# BASIC ROUTES
+# ============================================================
 
 @app.get("/")
 def home():
-    return {"message": "Exercise Recognition API is running"}
+
+    return {
+        "message": "Exercise Recognition API is running"
+    }
 
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
 
+    return {
+        "status": "healthy"
+    }
+
+
+# ============================================================
+# REQUEST MODEL
+# ============================================================
 
 class PredictionRequest(BaseModel):
+
     landmarks: list[dict[str, float]]
 
+
+# ============================================================
+# PREDICTION
+# ============================================================
 
 @app.post("/predict")
 def predict(request: PredictionRequest):
 
+    # Calculate 32 angles
     angles = get_32_angles(request.landmarks)
 
+    # Scale the angles
     scaled_angles = scaler.transform([angles])
 
+    # Predict
     prediction = model.predict(scaled_angles)[0]
 
-    exercise = prediction
-
+    # Confidence
     confidence = None
 
     if hasattr(model, "predict_proba"):
-        probabilities = model.predict_proba(scaled_angles)[0]
-        confidence = float(max(probabilities)) * 100
+
+        probabilities = model.predict_proba(
+            scaled_angles
+        )[0]
+
+        confidence = float(
+            max(probabilities)
+        ) * 100
 
     return {
-        "exercise": str(exercise),
+
+        "exercise": str(prediction),
+
         "confidence": confidence,
+
         "angles": angles
     }
